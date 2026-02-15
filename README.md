@@ -1,4 +1,4 @@
-# 🔐 Шифр Цезаря / Caesar Cipher
+# Шифр Цезаря / Caesar Cipher
 
 ![Java](https://img.shields.io/badge/Java-17%2B-orange?style=for-the-badge&logo=java)
 ![Swing](https://img.shields.io/badge/GUI-Swing-blue?style=for-the-badge)
@@ -179,7 +179,7 @@ caesar-cipher/
 5. Откройте Pull Request / Open a Pull Request
 
 
-## 📬 Контакты / Contact
+## Контакты / Contact
 
 - **Автор** - Daniil Rybin
 - **Email** - danya.danya.rus31@gmail.com
