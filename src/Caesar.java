@@ -8,12 +8,15 @@ public class Caesar extends JFrame
 {
     protected static char[] alphabet;
     protected int key = 0;
+    protected String keyword = "";
     protected String nameIn;
     protected String nameOut;
 
     private JTextArea inputTextArea;
     private JTextArea outputTextArea;
     private JTextField keyField;
+    private JTextField keywordField;
+    private JComboBox<String> cipherTypeCombo;
     private JButton encryptButton;
     private JButton decryptButton;
     private JButton loadFileButton;
@@ -21,9 +24,10 @@ public class Caesar extends JFrame
     private JButton clearButton;
     private JFileChooser fileChooser;
 
-    public Caesar() {
+    public Caesar()
+    {
         alphabet = createAlphabet();
-        setTitle("Шифр Цезаря");
+        setTitle("Шифры Цезаря и Виженера");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10, 10));
         createComponents();
@@ -34,14 +38,32 @@ public class Caesar extends JFrame
 
     private void createComponents()
     {
-        //ввод ключа
-        JPanel topPanel = new JPanel(new FlowLayout());
-        topPanel.add(new JLabel("Ключ сдвига (0-114):"));
-        keyField = new JTextField(5);
-        keyField.setText("3");
-        topPanel.add(keyField);
+        JPanel topPanel = new JPanel(new GridLayout(3, 1, 5, 5));
+        JPanel cipherPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        cipherPanel.add(new JLabel("Выберите шифр:"));
+        cipherTypeCombo = new JComboBox<>(new String[]{"Шифр Цезаря", "Шифр Виженера"});
+        cipherTypeCombo.addActionListener(e -> updateInputFields());
+        cipherPanel.add(cipherTypeCombo);
 
-        //кнопки
+        //ключ для шифра Цезаря
+        JPanel caesarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        caesarPanel.add(new JLabel("Ключ сдвига (0-114):"));
+        keyField = new JTextField(5);
+        keyField.setText("0");
+        caesarPanel.add(keyField);
+
+        //ключевое слово для шифра Виженера
+        JPanel vigenerePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        vigenerePanel.add(new JLabel("Ключевое слово:"));
+        keywordField = new JTextField(15);
+        keywordField.setText("ключ");
+        keywordField.setEnabled(false);
+        vigenerePanel.add(keywordField);
+
+        topPanel.add(cipherPanel);
+        topPanel.add(caesarPanel);
+        topPanel.add(vigenerePanel);
+
         JPanel buttonPanel = new JPanel(new FlowLayout());
         loadFileButton = new JButton("Загрузить файл");
         saveFileButton = new JButton("Сохранить результат");
@@ -55,7 +77,6 @@ public class Caesar extends JFrame
         buttonPanel.add(decryptButton);
         buttonPanel.add(clearButton);
 
-        //области текста
         inputTextArea = new JTextArea(15, 40);
         inputTextArea.setLineWrap(true);
         inputTextArea.setWrapStyleWord(true);
@@ -79,6 +100,12 @@ public class Caesar extends JFrame
 
         fileChooser = new JFileChooser();
         addEventHandlers();
+    }
+
+    private void updateInputFields() {
+        boolean isCaesar = cipherTypeCombo.getSelectedIndex() == 0;
+        keyField.setEnabled(isCaesar);
+        keywordField.setEnabled(!isCaesar);
     }
 
     private void addEventHandlers()
@@ -137,31 +164,62 @@ public class Caesar extends JFrame
             return;
         }
 
-        try
-        {
-            int shiftKey = Integer.parseInt(keyField.getText());
+        boolean isCaesar = cipherTypeCombo.getSelectedIndex() == 0;
 
-            //проверка ключа на диапазоне
-            if (shiftKey < 0 || shiftKey > 114) {
-                JOptionPane.showMessageDialog(this,
-                        "Ключ должен быть в диапазоне от 0 до 114!",
-                        "Ошибка",
-                        JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-
-            this.key = shiftKey;//сохранение ключа в поле класса
-
+        try {
             String result;
-            if (encrypt) {
-                result = shifrovanieText(inputText);
+            //шифр Цезаря
+            if (isCaesar) {
+                int shiftKey = Integer.parseInt(keyField.getText());
+
+                if (shiftKey < 0 || shiftKey > 114) {
+                    JOptionPane.showMessageDialog(this,
+                            "Ключ должен быть в диапазоне от 0 до 114!",
+                            "Ошибка",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                this.key = shiftKey;
+
+                if (encrypt) {
+                    result = shifrovanieText(inputText);
+                } else {
+                    result = deshifrovanieText(inputText);
+                }
             } else {
-                result = deshifrovanieText(inputText);
+                //шифр Виженера
+                keyword = keywordField.getText().trim();
+
+                if (keyword.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                            "Введите ключевое слово для шифра Виженера!",
+                            "Ошибка",
+                            JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                //проверка ключевого слова на алфавит
+                for (char c : keyword.toCharArray()) {
+                    if (findCharIndex(c) == -1) {
+                        JOptionPane.showMessageDialog(this,
+                                "Ключевое слово должно содержать только символы русского алфавита!",
+                                "Ошибка",
+                                JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
+
+                if (encrypt) {
+                    result = vigenereEncrypt(inputText);
+                } else {
+                    result = vigenereDecrypt(inputText);
+                }
             }
+
             outputTextArea.setText(result);
 
-        } catch (NumberFormatException ex)
-        {
+        } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this,
                     "Введите корректное число для ключа!",
                     "Ошибка",
@@ -169,6 +227,7 @@ public class Caesar extends JFrame
         }
     }
 
+    //шифрование Цезаря
     public String shifrovanieText(String text)
     {
         StringBuilder result = new StringBuilder();
@@ -185,14 +244,15 @@ public class Caesar extends JFrame
         }
         return result.toString();
     }
-
+    //Дешифрование Цезаря
     public String deshifrovanieText(String text)
     {
         StringBuilder result = new StringBuilder();
 
         for (char c : text.toCharArray()) {
             int index = findCharIndex(c);
-            if (index != -1) {
+            if (index != -1)
+            {
                 int newIndex = (index - key) % alphabet.length;
                 if (newIndex < 0) {
                     newIndex += alphabet.length;
@@ -206,6 +266,62 @@ public class Caesar extends JFrame
         return result.toString();
     }
 
+    //шифрование Виженера
+    public String vigenereEncrypt(String text) {
+        StringBuilder result = new StringBuilder();
+        int keywordLength = keyword.length();
+        int keyIndex = 0;
+
+        for (char c : text.toCharArray()) {
+            int charIndex = findCharIndex(c);
+
+            if (charIndex != -1) {
+                // Получаем символ ключа
+                char keyChar = keyword.charAt(keyIndex % keywordLength);
+                int keyCharIndex = findCharIndex(keyChar);
+
+                // Шифрование: (charIndex + keyCharIndex) mod alphabet.length
+                int newIndex = (charIndex + keyCharIndex) % alphabet.length;
+                result.append(alphabet[newIndex]);
+
+                keyIndex++;
+            } else {
+                // Если символ не из алфавита, оставляем без изменений
+                result.append(c);
+            }
+        }
+
+        return result.toString();
+    }
+
+    //дешифрование Виженера
+    public String vigenereDecrypt(String text) {
+        StringBuilder result = new StringBuilder();
+        int keywordLength = keyword.length();
+        int keyIndex = 0;
+
+        for (char c : text.toCharArray()) {
+            int charIndex = findCharIndex(c);
+
+            if (charIndex != -1) {
+                // Получаем символ ключа
+                char keyChar = keyword.charAt(keyIndex % keywordLength);
+                int keyCharIndex = findCharIndex(keyChar);
+
+                int newIndex = (charIndex - keyCharIndex + alphabet.length) % alphabet.length;
+                if (newIndex < 0) {
+                    newIndex += alphabet.length;
+                }
+                result.append(alphabet[newIndex]);
+
+                keyIndex++;
+            } else {
+                result.append(c);
+            }
+        }
+        return result.toString();
+    }
+
     private int findCharIndex(char c)
     {
         for (int i = 0; i < alphabet.length; i++) {
@@ -213,10 +329,11 @@ public class Caesar extends JFrame
                 return i;
             }
         }
-        return -1; //символ не найден
+        return -1;
     }
 
-    public static char[] createAlphabet() {
+    public static char[] createAlphabet()
+    {
         char[] alphabet = new char[115];
         alphabet[0] = 'а';
         alphabet[1] = 'б';
@@ -380,7 +497,6 @@ public class Caesar extends JFrame
             File selectedFile = fileChooser.getSelectedFile();
             nameOut = selectedFile.getAbsolutePath();
 
-            // Добавляем расширение .txt, если его нет
             if (!nameOut.toLowerCase().endsWith(".txt")) {
                 nameOut += ".txt";
                 selectedFile = new File(nameOut);
